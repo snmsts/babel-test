@@ -1,0 +1,42 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  (ql:quickload '(:iconv :babel) :silent t)
+  )
+
+(defpackage :ros.script.generate.3722104439
+  (:use :cl))
+(in-package :ros.script.generate.3722104439)
+
+(defvar *ng* (or (ignore-errors (iconv:iconv-from-string "EUCJP-WIN" (format nil "~A" (code-char 9312)))) 
+                 (coerce #(173 161) '(vector (unsigned-byte 8))))
+  "#\CIRCLED_DIGIT_ONE")
+
+(defvar *ok* (or (ignore-errors (iconv:iconv-from-string "EUCJP-WIN" (format nil "~A" (code-char 12354))))
+                 
+                 (coerce #(164 162) '(vector (unsigned-byte 8))))
+  "#\HIRAGANA_LETTER_A")
+
+(defun generate-files ()
+  (loop for i from 0 to 10
+     do
+       (with-open-file (out (format nil "~A" i)
+                            :direction :output
+                            :if-exists :supersede
+                            :element-type '(unsigned-byte 8))
+         (let ((seq (loop repeat 1000000
+                       for r = (random 1000000)
+              collect (when (>= r (* 100000 i)) t))))
+           (write-sequence (iconv:iconv-from-string "EUCJP-WIN" (format nil "~A~%" (count nil seq))) out)
+           (loop for i in seq
+              do (write-sequence (if i *ok* *ng*) out))))
+       (format t "~A generated~%" i)))
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (generate-files))
+;;; vim: set ft=lisp lisp:

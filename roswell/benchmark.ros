@@ -1,0 +1,46 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:babel) :silent t)
+  )
+
+(defpackage :ros.script.benchmark.3722351073
+  (:use :cl))
+(in-package :ros.script.benchmark.3722351073)
+
+(defun benchmark (r)
+  (format t "start ~A~%" r)
+  (or
+   (ignore-errors
+     (let ((seq (with-open-file (stream r :direction :input :element-type '(unsigned-byte 8))
+                  (let ((seq (make-array (file-length stream)
+                                         :element-type '(unsigned-byte 8)
+                                         :fill-pointer t)))
+                    (setf (fill-pointer seq) (read-sequence seq stream))
+                    seq)))
+           result
+           (count 0))
+       (handler-bind ((babel-encodings:character-decoding-error
+                       #'(lambda (e)
+                           (declare (ignore e))
+                           (incf count)
+                           #+(#.(cl:if (cl:ignore-errors (cl:read-from-string "babel:retry-code")) :and :or)) 
+                           (invoke-restart 'babel:retry-code #.(char-code #\?)))))
+         (time (setf result (babel:octets-to-string seq :encoding :eucjp))))
+       (format t "restart ~A times.~%~A~%" count (subseq result 0 50)))
+     t)
+   (format t "abort ~A~%" r)))
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (format t "~A ~A~%~A~%"
+          (lisp-implementation-type)
+          (lisp-implementation-version)
+          (uiop:run-program "uname -s -m" :output :string))
+  (loop for i from 0 to 10
+     while (benchmark (format nil "~A" i))))
+;;; vim: set ft=lisp lisp:
